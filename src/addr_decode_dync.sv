@@ -98,25 +98,33 @@ module addr_decode_dync #(
 
   logic [NoRules-1:0] matched_rules; // purely for address map debugging
 
+  typedef struct packed {
+    idx_t  idx;
+    addr_t start_addr;
+    addr_t end_addr;
+  } tmp_rule_t;
+  tmp_rule_t  [NoRules-1:0] tmp_addr_map_i;
+
   always_comb begin
     // default assignments
     matched_rules = '0;
     dec_valid_o   = 1'b0;
     dec_error_o   = (en_default_idx_i) ? 1'b0 : 1'b1;
     idx_o         = (en_default_idx_i) ? default_idx_i : '0;
+    tmp_addr_map_i = addr_map_i;
 
     // match the rules
     for (int unsigned i = 0; i < NoRules; i++) begin
       if (
-        !Napot && (addr_i >= addr_map_i[i].start_addr) &&
-        ((addr_i < addr_map_i[i].end_addr) || (addr_map_i[i].end_addr == '0)) ||
-        Napot && (addr_map_i[i].start_addr & addr_map_i[i].end_addr) ==
-                 (addr_i & addr_map_i[i].end_addr)
+        !Napot && (addr_i >= tmp_addr_map_i[i].start_addr) &&
+        ((addr_i < tmp_addr_map_i[i].end_addr) || (tmp_addr_map_i[i].end_addr == '0)) ||
+        Napot && (tmp_addr_map_i[i].start_addr & tmp_addr_map_i[i].end_addr) ==
+                 (addr_i & tmp_addr_map_i[i].end_addr)
       ) begin
         matched_rules[i] = ~config_ongoing_i;
         dec_valid_o      = ~config_ongoing_i;
         dec_error_o      = 1'b0;
-        idx_o            = config_ongoing_i ? default_idx_i : idx_t'(addr_map_i[i].idx);
+        idx_o            = config_ongoing_i ? default_idx_i : idx_t'(tmp_addr_map_i[i].idx);
       end
     end
   end
